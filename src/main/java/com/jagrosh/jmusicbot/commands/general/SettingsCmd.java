@@ -49,9 +49,9 @@ public class SettingsCmd extends Command
     {
         Settings s = event.getClient().getSettingsFor(event.getGuild());
         MessageCreateBuilder builder = new MessageCreateBuilder()
-                .setContent(EMOJI + " **" +
-                FormatUtil.filter(event.getSelfUser().getName()) +
-                "** settings:");
+                .addContent(EMOJI + " **")
+                .addContent(FormatUtil.filter(event.getSelfUser().getName()))
+                .addContent("** settings:");
         TextChannel tchan = s.getTextChannel(event.getGuild());
         VoiceChannel vchan = s.getVoiceChannel(event.getGuild());
         Role role = s.getRole(event.getGuild());

@@ -85,6 +85,7 @@ public class Listener extends ListenerAdapter
                 catch(Exception ignored) {} // ignored
             }, 0, 24, TimeUnit.HOURS);
         }
+        bot.resetGame();
     }
     
     @Override

@@ -35,6 +35,11 @@
             <name>Lavalink Repository</name>
             <url>https://maven.lavalink.dev/releases</url>
         </repository>
+        <repository>
+            <id>lavalinkSnapshots</id>
+            <name>Lavalink Snapshots</name>
+            <url>https://maven.lavalink.dev/snapshots</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -84,6 +89,21 @@
             <groupId>com.dunctebot</groupId>
             <artifactId>sourcemanagers</artifactId>
             <version>1.9.0</version>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>adapter-jda</artifactId>
+            <version>${libdave.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>impl-jni</artifactId>
+            <version>${libdave.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>moe.kyokobot.libdave</groupId>
+            <artifactId>natives-linux-x86-64</artifactId>
+            <version>${libdave.version}</version>
         </dependency>
 
         <!-- Misc Internal Dependencies -->
@@ -161,6 +181,7 @@
     </build>
 
     <properties>
+        <libdave.version>40a293a36</libdave.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>

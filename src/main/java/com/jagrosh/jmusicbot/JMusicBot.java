@@ -30,7 +30,10 @@ import com.jagrosh.jmusicbot.settings.SettingsManager;
 import com.jagrosh.jmusicbot.utils.OtherUtil;
 import java.awt.Color;
 import java.util.Arrays;
+import moe.kyokobot.libdave.NativeDaveFactory;
+import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory;
 import net.dv8tion.jda.api.*;
+import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.entities.Activity;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
@@ -93,6 +96,18 @@ public class JMusicBot
         Bot bot = new Bot(waiter, config, settings);
         CommandClient client = createCommandClient(config, settings, bot);
         
+        AudioModuleConfig audioModuleConfig;
+        try
+        {
+            NativeDaveFactory.ensureAvailable();
+            audioModuleConfig = new AudioModuleConfig()
+                    .withDaveSessionFactory(new LDJDADaveSessionFactory(new NativeDaveFactory()));
+        }
+        catch(RuntimeException ex)
+        {
+            prompt.alert(Prompt.Level.ERROR, "JMusicBot", "DAVE native bindings not available: " + ex);
+            return;
+        }
         
         if(!prompt.isNoGUI())
         {
@@ -121,6 +136,7 @@ public class JMusicBot
                     .setActivity(config.isGameNone() ? null : Activity.playing("loading..."))
                     .setStatus(config.getStatus()==OnlineStatus.INVISIBLE || config.getStatus()==OnlineStatus.OFFLINE 
                             ? OnlineStatus.INVISIBLE : OnlineStatus.DO_NOT_DISTURB)
+                    .setAudioModuleConfig(audioModuleConfig)
                     .addEventListeners(client, waiter, new Listener(bot))
                     .setBulkDeleteSplittingEnabled(true)
                     .build();

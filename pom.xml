@@ -18,14 +18,6 @@
             <url>https://jcenter.bintray.com</url>
         </repository>
         <repository>
-            <id>jitpack.io</id>
-            <url>https://jitpack.io</url>
-            <snapshots>
-                <enabled>true</enabled>
-                <updatePolicy>always</updatePolicy>
-            </snapshots>
-        </repository>
-        <repository>
             <id>m2.duncte123.dev</id>
             <name>m2-duncte123</name>
             <url>https://m2.duncte123.dev/releases</url>
@@ -80,11 +72,6 @@
             <artifactId>common</artifactId>
             <version>1.18.0</version>
         </dependency>
-	<dependency>
-	    <groupId>com.github.jagrosh</groupId>
-	    <artifactId>JLyrics</artifactId>
-	    <version>master-SNAPSHOT</version>
-	</dependency>
         <dependency>
             <groupId>com.dunctebot</groupId>
             <artifactId>sourcemanagers</artifactId>

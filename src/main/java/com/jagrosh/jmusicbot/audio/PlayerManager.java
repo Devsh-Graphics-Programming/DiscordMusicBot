@@ -32,7 +32,13 @@ import com.sedmelluq.discord.lavaplayer.source.twitch.TwitchStreamAudioSourceMan
 import com.sedmelluq.discord.lavaplayer.source.vimeo.VimeoAudioSourceManager;
 import dev.lavalink.youtube.YoutubeAudioSourceManager;
 import dev.lavalink.youtube.YoutubeSourceOptions;
+import dev.lavalink.youtube.clients.AndroidVr;
+import dev.lavalink.youtube.clients.MWeb;
+import dev.lavalink.youtube.clients.Music;
+import dev.lavalink.youtube.clients.Tv;
+import dev.lavalink.youtube.clients.TvHtml5Simply;
 import dev.lavalink.youtube.clients.Web;
+import dev.lavalink.youtube.clients.WebEmbedded;
 import net.dv8tion.jda.api.entities.Guild;
 
 /**
@@ -54,12 +60,23 @@ public class PlayerManager extends DefaultAudioPlayerManager
     {
         TransformativeAudioSourceManager.createTransforms(bot.getConfig().getTransforms()).forEach(t -> registerSourceManager(t));
 
-        if (config.getYtPoToken() != null && config.getYtVisitorData() != null)
+        if (!config.useYtOauth() && config.getYtPoToken() != null && config.getYtVisitorData() != null)
             Web.setPoTokenAndVisitorData(config.getYtPoToken(), config.getYtVisitorData());
 
         YoutubeSourceOptions options = new YoutubeSourceOptions()
                 .setRemoteCipher("https://cipher.kikkia.dev/", null, "JMusicBot-fork");
-        YoutubeAudioSourceManager yt = new YoutubeAudioSourceManager(options, YoutubeAudioSourceManager.DEFAULT_CLIENTS);
+        YoutubeAudioSourceManager yt = new YoutubeAudioSourceManager(
+                options,
+                new Tv(),
+                new Music(),
+                new TvHtml5Simply(),
+                new MWeb(),
+                new Web(),
+                new WebEmbedded(),
+                new AndroidVr()
+        );
+        if (config.useYtOauth())
+            yt.useOauth2(config.getYtOauthRefreshToken(), config.getYtOauthRefreshToken() != null);
         yt.setPlaylistPageCount(bot.getConfig().getMaxYTPlaylistPages());
         registerSourceManager(yt);
 

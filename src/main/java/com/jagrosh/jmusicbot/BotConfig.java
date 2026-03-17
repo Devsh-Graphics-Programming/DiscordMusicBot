@@ -41,8 +41,8 @@ public class BotConfig
     private Path path = null;
     private String token, prefix, altprefix, helpWord, playlistsFolder, logLevel,
             successEmoji, warningEmoji, errorEmoji, loadingEmoji, searchingEmoji,
-            ytPoToken, ytVisitorData, evalEngine;
-    private boolean stayInChannel, songInGame, npImages, updatealerts, useEval, dbots;
+            ytPoToken, ytVisitorData, ytOauthRefreshToken, evalEngine;
+    private boolean stayInChannel, songInGame, npImages, updatealerts, useEval, dbots, ytOauth;
     private long owner, maxSeconds, aloneTimeUntilStop;
     private int maxYTPlaylistPages;
     private double skipratio;
@@ -98,6 +98,8 @@ public class BotConfig
             aliases = config.getConfig("aliases");
             ytPoToken = config.getString("ytpotoken");
             ytVisitorData = config.getString("ytvisitordata");
+            ytOauth = config.getBoolean("ytoauth");
+            ytOauthRefreshToken = config.getString("ytoauthrefreshtoken");
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 113156185389092864L;
@@ -333,6 +335,16 @@ public class BotConfig
     public String getYtVisitorData()
     {
         return ytVisitorData.equals("VISITOR_DATA_HERE") ? null : ytVisitorData;
+    }
+
+    public boolean useYtOauth()
+    {
+        return ytOauth;
+    }
+
+    public String getYtOauthRefreshToken()
+    {
+        return ytOauthRefreshToken.equals("YT_OAUTH_REFRESH_TOKEN_HERE") ? null : ytOauthRefreshToken;
     }
 
     public boolean useEval()

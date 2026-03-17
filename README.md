@@ -11,6 +11,114 @@
 [![Build and Test](https://github.com/jagrosh/MusicBot/actions/workflows/build-and-test.yml/badge.svg)](https://github.com/jagrosh/MusicBot/actions/workflows/build-and-test.yml)
 [![CodeFactor](https://www.codefactor.io/repository/github/jagrosh/musicbot/badge)](https://www.codefactor.io/repository/github/jagrosh/musicbot)
 
+## DevSH Fork Notes
+
+This repository is a maintained fork focused on keeping YouTube playback working after upstream stalled.
+
+Important differences from the original project:
+1. This fork supports YouTube OAuth playback fallback.
+2. If you want reliable playback for blocked or age-restricted videos, you should use a dedicated burner Google account.
+3. Do not use your main Google account.
+4. If the burner account cannot play a video in the normal YouTube browser UI, the bot will usually not be able to play it either.
+
+## YouTube OAuth Setup For This Fork
+
+If you only care about unrestricted videos, the bot may still work without OAuth.
+If you want restricted videos, age-gated videos, or better resilience against `This video requires login`, follow the full setup below.
+
+### What you need
+
+1. A Discord bot token as usual.
+2. A separate Google burner account just for this bot.
+3. That Google account must be able to play the target video directly on YouTube in a browser.
+
+### Google account preparation
+
+1. Create or pick a burner Google account.
+2. Set the birthday on that account to 18+.
+3. Complete any Google or YouTube age verification required for that account.
+4. Open YouTube in a normal browser while signed into that burner account.
+5. Confirm that the exact age-restricted video plays in the browser UI.
+
+If step 5 fails, the bot is not ready yet. Fix the account first.
+
+### Config values
+
+This fork adds the following config keys:
+
+```conf
+ytoauth = true
+ytoauthrefreshtoken = "YT_OAUTH_REFRESH_TOKEN_HERE"
+```
+
+When using OAuth, do not use a `poToken` at the same time.
+Leave these at their placeholders:
+
+```conf
+ytpotoken = "PO_TOKEN_HERE"
+ytvisitordata = "VISITOR_DATA_HERE"
+```
+
+### First-time OAuth setup
+
+1. Open your `config.txt`.
+2. Set `ytoauth = true`.
+3. Leave `ytoauthrefreshtoken = "YT_OAUTH_REFRESH_TOKEN_HERE"` for the first run.
+4. Make sure `ytpotoken` and `ytvisitordata` are still placeholders.
+5. Start the bot.
+6. Watch the bot logs.
+7. The bot will print a message telling you to go to `https://www.google.com/device` and enter a code.
+8. Open that URL in a browser.
+9. Sign in with the burner Google account.
+10. Enter the device code shown in the bot logs.
+11. Approve the connection.
+12. Wait for the bot logs to print the refresh token.
+
+The log line will look similar to this:
+
+```text
+OAUTH INTEGRATION: Token retrieved successfully. Store your refresh token as this can be reused. (your_refresh_token_here)
+```
+
+### Persisting the refresh token
+
+1. Stop the bot.
+2. Open `config.txt`.
+3. Replace the placeholder with the real refresh token:
+
+```conf
+ytoauth = true
+ytoauthrefreshtoken = "paste_the_refresh_token_here"
+```
+
+4. Save the file.
+5. Start the bot again.
+6. Check the logs for:
+
+```text
+YouTube access token refreshed successfully
+```
+
+At that point the token is persisted and future restarts should not require the device flow again unless Google invalidates the token.
+
+### Verifying playback
+
+1. Join a voice channel.
+2. Use the bot to play a normal YouTube video.
+3. Use the bot to play an age-restricted YouTube video.
+4. If the browser account can play the video but the bot cannot, check the bot logs for the current playability reason.
+
+### Troubleshooting
+
+1. `This video requires login`
+   This usually means OAuth is not enabled, the refresh token is missing, the refresh token is invalid, or the account is not sufficiently verified.
+2. `Sign in to confirm your age`
+   The burner account still does not pass YouTube age verification for that video.
+3. The video works in Discord for some links but not others
+   The failing video may be private, region-blocked, removed, or age-gated beyond what the account currently allows.
+4. The device flow appears again after restart
+   The refresh token was not copied into `config.txt` correctly or Google invalidated it.
+
 A cross-platform Discord music bot with a clean interface, and that is easy to set up and run yourself!
 
 [![Setup](http://i.imgur.com/VvXYp5j.png)](https://jmusicbot.com/setup)

@@ -39,7 +39,7 @@ jobs:
       - name: Find built jar
         run: |
           set -e
-          JAR="$(ls target/*-All.jar 2>/dev/null || ls target/*.jar | head -n1)"
+          JAR="$(find target -maxdepth 1 -type f \( -name '*-All.jar' -o -name '*.jar' \) | sort | head -n1)"
           echo "JAR=$JAR" >> "$GITHUB_ENV"
 
       - name: Rename jar

@@ -119,6 +119,47 @@ At that point the token is persisted and future restarts should not require the 
 4. The device flow appears again after restart
    The refresh token was not copied into `config.txt` correctly or Google invalidated it.
 
+## Local Docker Multi-Bot Test
+
+This fork can be tested locally with multiple isolated bot containers.
+
+Recommended local layout:
+1. One container per bot token.
+2. One data directory per bot under `docker/instances/<bot-name>`.
+3. One generated compose file for all active local test bots.
+
+Quick start:
+1. Create a bot scaffold:
+   `powershell -ExecutionPolicy Bypass -File scripts/add-bot.ps1 devshmusic-test1`
+2. Copy or edit `docker/instances/devshmusic-test1/bot.env`.
+3. Repeat for more bots.
+4. Regenerate compose:
+   `powershell -ExecutionPolicy Bypass -File scripts/render-compose.ps1`
+5. Start all bots:
+   `docker compose -f docker-compose.generated.yml up -d --build`
+
+Container-specific behavior:
+1. `BOT_TOKEN` and `BOT_OWNER` can be provided from `bot.env`.
+2. Relative state paths are resolved from `JMUSICBOT_HOME`, which defaults to `/data` in the container.
+3. Each bot keeps its own `config.txt`, `serversettings.json`, and `Playlists/` under its own instance directory.
+
+## GHCR Container Publishing
+
+GitHub Actions now builds the Docker image from this repository and publishes it to GHCR.
+
+Published image:
+1. `ghcr.io/devsh-graphics-programming/discordmusicbot:latest` from `master`
+2. `ghcr.io/devsh-graphics-programming/discordmusicbot:sha-<commit>` for immutable rollbacks
+3. `ghcr.io/devsh-graphics-programming/discordmusicbot:<version>` for matching Git tags
+
+Recommended deployment flow:
+1. Build and verify locally first.
+2. Push to `master` when ready.
+3. On the target host run `docker compose pull`.
+4. Then run `docker compose up -d`.
+
+That lets consumers update by pulling a new image instead of rebuilding the jar on the server.
+
 A cross-platform Discord music bot with a clean interface, and that is easy to set up and run yourself!
 
 [![Setup](http://i.imgur.com/VvXYp5j.png)](https://jmusicbot.com/setup)

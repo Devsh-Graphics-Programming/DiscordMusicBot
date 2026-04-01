@@ -1,0 +1,13 @@
+/////////////////////////////////////////////////////////
+// Minimal per-instance config for local Docker tests  //
+/////////////////////////////////////////////////////////
+
+token = "BOT_TOKEN_HERE"
+owner = 0 // OWNER ID
+prefix = "@mention"
+playlistsfolder = "Playlists"
+stayinchannel = false
+npimages = false
+ytoauth = false
+updatealerts = false
+loglevel = INFO

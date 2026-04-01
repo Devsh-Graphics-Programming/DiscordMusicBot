@@ -1,0 +1,10 @@
+.git
+.gitignore
+.circleci
+.github
+target
+tmp
+docker-compose.generated.yml
+docker/instances
+scripts
+*.log

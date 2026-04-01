@@ -33,6 +33,12 @@ import net.dv8tion.jda.api.entities.Activity;
  */
 public class BotConfig
 {
+    private static final String BOT_TOKEN_ENV = "BOT_TOKEN";
+    private static final String BOT_OWNER_ENV = "BOT_OWNER";
+    private static final String YT_PO_TOKEN_ENV = "YT_PO_TOKEN";
+    private static final String YT_VISITOR_DATA_ENV = "YT_VISITOR_DATA";
+    private static final String YT_OAUTH_ENV = "YT_OAUTH";
+    private static final String YT_OAUTH_REFRESH_TOKEN_ENV = "YT_OAUTH_REFRESH_TOKEN";
     private final Prompt prompt;
     private final static String CONTEXT = "Config";
     private final static String START_TOKEN = "/// START OF JMUSICBOT CONFIG ///";
@@ -72,11 +78,11 @@ public class BotConfig
             Config config = ConfigFactory.load();
             
             // set values
-            token = config.getString("token");
+            token = getEnvOverride(BOT_TOKEN_ENV, config.getString("token"));
             prefix = config.getString("prefix");
             altprefix = config.getString("altprefix");
             helpWord = config.getString("help");
-            owner = config.getLong("owner");
+            owner = getLongOverride(BOT_OWNER_ENV, config.getLong("owner"));
             successEmoji = config.getString("success");
             warningEmoji = config.getString("warning");
             errorEmoji = config.getString("error");
@@ -96,10 +102,10 @@ public class BotConfig
             aloneTimeUntilStop = config.getLong("alonetimeuntilstop");
             playlistsFolder = config.getString("playlistsfolder");
             aliases = config.getConfig("aliases");
-            ytPoToken = config.getString("ytpotoken");
-            ytVisitorData = config.getString("ytvisitordata");
-            ytOauth = config.getBoolean("ytoauth");
-            ytOauthRefreshToken = config.getString("ytoauthrefreshtoken");
+            ytPoToken = getEnvOverride(YT_PO_TOKEN_ENV, config.getString("ytpotoken"));
+            ytVisitorData = getEnvOverride(YT_VISITOR_DATA_ENV, config.getString("ytvisitordata"));
+            ytOauth = getBooleanOverride(YT_OAUTH_ENV, config.getBoolean("ytoauth"));
+            ytOauthRefreshToken = getEnvOverride(YT_OAUTH_REFRESH_TOKEN_ENV, config.getString("ytoauthrefreshtoken"));
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 113156185389092864L;
@@ -215,6 +221,26 @@ public class BotConfig
         {
             prompt.alert(Prompt.Level.ERROR, "JMusicBot Config", "An error occurred writing the default config file: " + ex.getMessage());
         }
+    }
+
+    private static String getEnvOverride(String envName, String currentValue)
+    {
+        String value = System.getenv(envName);
+        return value == null || value.trim().isEmpty() ? currentValue : value.trim();
+    }
+
+    private static long getLongOverride(String envName, long currentValue)
+    {
+        String value = System.getenv(envName);
+        if(value == null || value.trim().isEmpty())
+            return currentValue;
+        return Long.parseLong(value.trim());
+    }
+
+    private static boolean getBooleanOverride(String envName, boolean currentValue)
+    {
+        String value = System.getenv(envName);
+        return value == null || value.trim().isEmpty() ? currentValue : Boolean.parseBoolean(value.trim());
     }
     
     public boolean isValid()

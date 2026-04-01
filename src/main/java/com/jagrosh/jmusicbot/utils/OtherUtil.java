@@ -40,11 +40,15 @@ import org.json.JSONTokener;
  */
 public class OtherUtil
 {
+    private final static String RELEASES_PAGE_URL = "https://github.com/Devsh-Graphics-Programming/DiscordMusicBot/releases/latest";
+    private final static String RELEASES_API_URL = "https://api.github.com/repos/Devsh-Graphics-Programming/DiscordMusicBot/releases/latest";
     public final static String NEW_VERSION_AVAILABLE = "There is a new version of JMusicBot available!\n"
                     + "Current version: %s\n"
                     + "New Version: %s\n\n"
-                    + "Please visit https://github.com/jagrosh/MusicBot/releases/latest to get the latest release.";
+                    + "Please visit " + RELEASES_PAGE_URL + " to get the latest release.";
     private final static String WINDOWS_INVALID_PATH = "c:\\windows\\system32\\";
+    private final static String DATA_ROOT_PROPERTY = "jmusicbot.home";
+    private final static String DATA_ROOT_ENV = "JMUSICBOT_HOME";
     
     /**
      * gets a Path from a String
@@ -57,6 +61,12 @@ public class OtherUtil
     public static Path getPath(String path)
     {
         Path result = Paths.get(path);
+        if(!result.isAbsolute())
+        {
+            String dataRoot = getConfiguredDataRoot();
+            if(dataRoot != null)
+                result = Paths.get(dataRoot).resolve(result).normalize();
+        }
         // special logic to prevent trying to access system32
         if(result.toAbsolutePath().toString().toLowerCase().startsWith(WINDOWS_INVALID_PATH))
         {
@@ -67,6 +77,14 @@ public class OtherUtil
             catch(URISyntaxException ignored) {}
         }
         return result;
+    }
+
+    private static String getConfiguredDataRoot()
+    {
+        String dataRoot = System.getProperty(DATA_ROOT_PROPERTY);
+        if(dataRoot == null || dataRoot.trim().isEmpty())
+            dataRoot = System.getenv(DATA_ROOT_ENV);
+        return dataRoot == null || dataRoot.trim().isEmpty() ? null : dataRoot.trim();
     }
     
     /**
@@ -165,6 +183,8 @@ public class OtherUtil
     {
         // Get current version number
         String version = getCurrentVersion();
+        if(version == null || "UNKNOWN".equalsIgnoreCase(version) || "Snapshot".equalsIgnoreCase(version))
+            return;
         
         // Check for new version
         String latestVersion = getLatestVersion();
@@ -188,7 +208,7 @@ public class OtherUtil
         try
         {
             Response response = new OkHttpClient.Builder().build()
-                    .newCall(new Request.Builder().get().url("https://api.github.com/repos/jagrosh/MusicBot/releases/latest").build())
+                    .newCall(new Request.Builder().get().url(RELEASES_API_URL).build())
                     .execute();
             ResponseBody body = response.body();
             if(body != null)
@@ -216,17 +236,10 @@ public class OtherUtil
      * Checks if the bot JMusicBot is being run on is supported & returns the reason if it is not.
      * @return A string with the reason, or null if it is supported.
      */
-    public static String getUnsupportedBotReason(JDA jda) 
+    public static String getUnsupportedBotReason(JDA jda)
     {
         if (jda.getSelfUser().getFlags().contains(User.UserFlag.VERIFIED_BOT))
             return "The bot is verified. Using JMusicBot in a verified bot is not supported.";
-
-        ApplicationInfo info = jda.retrieveApplicationInfo().complete();
-        if (info.isBotPublic())
-            return "\"Public Bot\" is enabled. Using JMusicBot as a public bot is not supported. Please disable it in the "
-                    + "Developer Dashboard at https://discord.com/developers/applications/" + jda.getSelfUser().getId() + "/bot ."
-                    + "You may also need to disable all Installation Contexts at https://discord.com/developers/applications/" 
-                    + jda.getSelfUser().getId() + "/installation .";
 
         return null;
     }

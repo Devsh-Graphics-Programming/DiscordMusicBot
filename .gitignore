@@ -4,4 +4,10 @@
 /test/
 *.json
 *.txt
+tmp/
+docker/instances/*
+!docker/instances/_template/
+!docker/instances/_template/**
+docker/instances/*/bot.env
+docker-compose.generated.yml
 nb*.xml

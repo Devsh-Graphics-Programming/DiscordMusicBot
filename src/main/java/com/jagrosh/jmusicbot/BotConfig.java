@@ -39,6 +39,10 @@ public class BotConfig
     private static final String YT_VISITOR_DATA_ENV = "YT_VISITOR_DATA";
     private static final String YT_OAUTH_ENV = "YT_OAUTH";
     private static final String YT_OAUTH_REFRESH_TOKEN_ENV = "YT_OAUTH_REFRESH_TOKEN";
+    private static final String SPOTIFY_ENABLED_ENV = "SPOTIFY_ENABLED";
+    private static final String SPOTIFY_API_URL_ENV = "SPOTIFY_API_URL";
+    private static final String SPOTIFY_PIPE_PATH_ENV = "SPOTIFY_PIPE_PATH";
+    private static final String SPOTIFY_FFMPEG_PATH_ENV = "SPOTIFY_FFMPEG_PATH";
     private final Prompt prompt;
     private final static String CONTEXT = "Config";
     private final static String START_TOKEN = "/// START OF JMUSICBOT CONFIG ///";
@@ -47,8 +51,9 @@ public class BotConfig
     private Path path = null;
     private String token, prefix, altprefix, helpWord, playlistsFolder, logLevel,
             successEmoji, warningEmoji, errorEmoji, loadingEmoji, searchingEmoji,
-            ytPoToken, ytVisitorData, ytOauthRefreshToken, evalEngine;
-    private boolean stayInChannel, songInGame, npImages, updatealerts, useEval, dbots, ytOauth;
+            ytPoToken, ytVisitorData, ytOauthRefreshToken, evalEngine,
+            spotifyApiUrl, spotifyPipePath, spotifyFfmpegPath;
+    private boolean stayInChannel, songInGame, npImages, updatealerts, useEval, dbots, ytOauth, spotifyEnabled;
     private long owner, maxSeconds, aloneTimeUntilStop;
     private int maxYTPlaylistPages;
     private double skipratio;
@@ -106,6 +111,10 @@ public class BotConfig
             ytVisitorData = getEnvOverride(YT_VISITOR_DATA_ENV, config.getString("ytvisitordata"));
             ytOauth = getBooleanOverride(YT_OAUTH_ENV, config.getBoolean("ytoauth"));
             ytOauthRefreshToken = getEnvOverride(YT_OAUTH_REFRESH_TOKEN_ENV, config.getString("ytoauthrefreshtoken"));
+            spotifyEnabled = getBooleanOverride(SPOTIFY_ENABLED_ENV, config.getBoolean("spotifyenabled"));
+            spotifyApiUrl = getEnvOverride(SPOTIFY_API_URL_ENV, config.getString("spotifyapiurl"));
+            spotifyPipePath = getEnvOverride(SPOTIFY_PIPE_PATH_ENV, config.getString("spotifypipepath"));
+            spotifyFfmpegPath = getEnvOverride(SPOTIFY_FFMPEG_PATH_ENV, config.getString("spotifyffmpegpath"));
             transforms = config.getConfig("transforms");
             skipratio = config.getDouble("skipratio");
             dbots = owner == 113156185389092864L;
@@ -371,6 +380,26 @@ public class BotConfig
     public String getYtOauthRefreshToken()
     {
         return ytOauthRefreshToken.equals("YT_OAUTH_REFRESH_TOKEN_HERE") ? null : ytOauthRefreshToken;
+    }
+
+    public boolean useSpotify()
+    {
+        return spotifyEnabled;
+    }
+
+    public String getSpotifyApiUrl()
+    {
+        return spotifyApiUrl;
+    }
+
+    public String getSpotifyPipePath()
+    {
+        return spotifyPipePath;
+    }
+
+    public String getSpotifyFfmpegPath()
+    {
+        return spotifyFfmpegPath;
     }
 
     public boolean useEval()

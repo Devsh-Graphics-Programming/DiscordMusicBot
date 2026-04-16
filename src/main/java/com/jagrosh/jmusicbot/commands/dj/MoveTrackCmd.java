@@ -27,6 +27,12 @@ public class MoveTrackCmd extends DJCommand
     @Override
     public void doCommand(CommandEvent event)
     {
+        AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("`movetrack` is not supported while Spotify context playback is active.");
+            return;
+        }
         int from;
         int to;
 
@@ -56,7 +62,6 @@ public class MoveTrackCmd extends DJCommand
         }
 
         // Validate that from and to are available
-        AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
         AbstractQueue<QueuedTrack> queue = handler.getQueue();
         if (isUnavailablePosition(queue, from))
         {

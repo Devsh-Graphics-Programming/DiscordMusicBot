@@ -19,6 +19,7 @@ import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
+import java.io.IOException;
 
 /**
  *
@@ -40,6 +41,22 @@ public class ShuffleCmd extends MusicCommand
     public void doCommand(CommandEvent event) 
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            boolean enabled = false;
+            if(handler.getSpotifyStatus() != null)
+                enabled = handler.getSpotifyStatus().isShuffleContext();
+            try
+            {
+                boolean current = handler.setShuffleContext(!enabled);
+                event.replySuccess("Spotify shuffle is now `" + (current ? "on" : "off") + "`.");
+            }
+            catch(IOException ex)
+            {
+                event.replyError("Failed to update Spotify shuffle: " + ex.getMessage());
+            }
+            return;
+        }
         int s = handler.getQueue().shuffle(event.getAuthor().getIdLong());
         switch (s) 
         {

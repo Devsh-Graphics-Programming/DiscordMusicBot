@@ -49,7 +49,7 @@ public class LyricsCmd extends MusicCommand
         {
             AudioHandler sendingHandler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
             if (sendingHandler.isMusicPlaying(event.getJDA()))
-                title = sendingHandler.getPlayer().getPlayingTrack().getInfo().title;
+                title = sendingHandler.getCurrentTitle();
             else
             {
                 event.replyError("There must be music playing to use that!");

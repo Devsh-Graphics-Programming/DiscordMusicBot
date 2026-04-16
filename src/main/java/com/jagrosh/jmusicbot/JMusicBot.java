@@ -35,6 +35,7 @@ import moe.kyokobot.libdave.jda.LDJDADaveSessionFactory;
 import net.dv8tion.jda.api.*;
 import net.dv8tion.jda.api.audio.AudioModuleConfig;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Role;
 import net.dv8tion.jda.api.requests.GatewayIntent;
 import net.dv8tion.jda.api.utils.cache.CacheFlag;
 import net.dv8tion.jda.api.exceptions.ErrorResponseException;
@@ -197,6 +198,18 @@ public class JMusicBot
         CommandClientBuilder cb = new CommandClientBuilder()
                 .setPrefix(config.getPrefix())
                 .setAlternativePrefix(config.getAltPrefix())
+                .setPrefixFunction(event ->
+                {
+                    if(!event.isFromGuild())
+                        return null;
+                    long selfId = event.getJDA().getSelfUser().getIdLong();
+                    return event.getGuild().getSelfMember().getRoles().stream()
+                            .filter(Role::isManaged)
+                            .filter(role -> role.getTags() != null && role.getTags().isBot() && role.getTags().getBotIdLong() == selfId)
+                            .findFirst()
+                            .map(role -> "<@&" + role.getId() + ">")
+                            .orElse(null);
+                })
                 .setOwnerId(Long.toString(config.getOwnerId()))
                 .setEmojis(config.getSuccess(), config.getWarning(), config.getError())
                 .setHelpWord(config.getHelp())

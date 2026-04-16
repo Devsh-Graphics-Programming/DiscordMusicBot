@@ -17,9 +17,11 @@ package com.jagrosh.jmusicbot.commands.dj;
 
 import com.jagrosh.jdautilities.command.CommandEvent;
 import com.jagrosh.jmusicbot.Bot;
+import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.settings.RepeatMode;
 import com.jagrosh.jmusicbot.settings.Settings;
+import java.io.IOException;
 
 /**
  *
@@ -44,9 +46,11 @@ public class RepeatCmd extends DJCommand
         String args = event.getArgs();
         RepeatMode value;
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
+        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
         if(args.isEmpty())
         {
-            if(settings.getRepeatMode() == RepeatMode.OFF)
+            RepeatMode current = handler != null && handler.isSpotifyActive() ? handler.getRepeatMode() : settings.getRepeatMode();
+            if(current == RepeatMode.OFF)
                 value = RepeatMode.ALL;
             else
                 value = RepeatMode.OFF;
@@ -66,6 +70,19 @@ public class RepeatCmd extends DJCommand
         else
         {
             event.replyError("Valid options are `off`, `all` or `single` (or leave empty to toggle between `off` and `all`)");
+            return;
+        }
+        if(handler != null && handler.isSpotifyActive())
+        {
+            try
+            {
+                RepeatMode applied = handler.setRepeatMode(value);
+                event.replySuccess("Spotify repeat mode is now `"+applied.getUserFriendlyName()+"`");
+            }
+            catch(IOException ex)
+            {
+                event.replyError("Failed to update Spotify repeat mode: " + ex.getMessage());
+            }
             return;
         }
         settings.setRepeatMode(value);

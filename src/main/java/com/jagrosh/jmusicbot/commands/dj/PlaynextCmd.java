@@ -52,6 +52,12 @@ public class PlaynextCmd extends DJCommand
     @Override
     public void doCommand(CommandEvent event)
     {
+        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("`playnext` is not supported while Spotify context playback is active.");
+            return;
+        }
         if(event.getArgs().isEmpty() && event.getMessage().getAttachments().isEmpty())
         {
             event.replyWarning("Please include a song title or URL!");

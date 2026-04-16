@@ -16,6 +16,7 @@
 package com.jagrosh.jmusicbot.commands.music;
 
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyTrackDetails;
 import com.jagrosh.jmusicbot.utils.TimeUtil;
 import com.sedmelluq.discord.lavaplayer.player.AudioLoadResultHandler;
 import com.sedmelluq.discord.lavaplayer.tools.FriendlyException;
@@ -32,10 +33,13 @@ import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
 import com.jagrosh.jmusicbot.playlist.PlaylistLoader.Playlist;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import net.dv8tion.jda.api.Permission;
 import net.dv8tion.jda.api.entities.Message;
 import net.dv8tion.jda.api.exceptions.PermissionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -43,6 +47,7 @@ import net.dv8tion.jda.api.exceptions.PermissionException;
  */
 public class PlayCmd extends MusicCommand
 {
+    private static final Logger LOG = LoggerFactory.getLogger(PlayCmd.class);
     private final static String LOAD = "\uD83D\uDCE5"; // 📥
     private final static String CANCEL = "\uD83D\uDEAB"; // 🚫
     
@@ -67,12 +72,19 @@ public class PlayCmd extends MusicCommand
         if(event.getArgs().isEmpty() && event.getMessage().getAttachments().isEmpty())
         {
             AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
-            if(handler.getPlayer().getPlayingTrack()!=null && handler.getPlayer().isPaused())
+            if(handler.hasActiveTrack() && handler.isPaused())
             {
                 if(DJCommand.checkDJPermission(event))
                 {
-                    handler.getPlayer().setPaused(false);
-                    event.replySuccess("Resumed **"+handler.getPlayer().getPlayingTrack().getInfo().title+"**.");
+                    try
+                    {
+                        handler.resumePlayback();
+                        event.replySuccess("Resumed **"+handler.getCurrentTitle()+"**.");
+                    }
+                    catch(IOException ex)
+                    {
+                        event.replyError("Failed to resume playback: " + ex.getMessage());
+                    }
                 }
                 else
                     event.replyError("Only DJs can unpause the player!");
@@ -89,6 +101,43 @@ public class PlayCmd extends MusicCommand
         String args = event.getArgs().startsWith("<") && event.getArgs().endsWith(">") 
                 ? event.getArgs().substring(1,event.getArgs().length()-1) 
                 : event.getArgs().isEmpty() ? event.getMessage().getAttachments().get(0).getUrl() : event.getArgs();
+        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyInput(args))
+        {
+            if(handler.hasManagedQueue() && (handler.getPlayer().getPlayingTrack() != null || !handler.getQueue().isEmpty()))
+            {
+                event.replyError("Spotify playback cannot be mixed with the current lavaplayer queue yet. Stop the player first.");
+                return;
+            }
+            String loadingMessage = FormatUtil.filter(loadingEmoji+" Loading Spotify... `["+args+"]`");
+            event.getTextChannel().sendMessage(loadingMessage).queue(m ->
+            {
+                bot.getThreadpool().submit(() ->
+                {
+                    try
+                    {
+                        SpotifyTrackDetails track = handler.startSpotify(args, new RequestMetadata(event.getAuthor(), new RequestMetadata.RequestInfo(args, args)));
+                        String title = track == null ? args : track.getName();
+                        long duration = track == null ? 0L : track.getDurationMs();
+                        String message = duration > 0
+                                ? event.getClient().getSuccess()+" Started Spotify playback of **"+title+"** (`"+TimeUtil.formatTime(duration)+"`)."
+                                : event.getClient().getSuccess()+" Started Spotify playback of `"+args+"`.";
+                        m.editMessage(FormatUtil.filter(message)).queue();
+                    }
+                    catch(Exception ex)
+                    {
+                        LOG.error("Spotify playback failed in guild {} for {}", event.getGuild().getId(), args, ex);
+                        m.editMessage(event.getClient().getError()+" Spotify error: "+(ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage())).queue();
+                    }
+                });
+            }, failure -> LOG.error("Failed to send Spotify loading message in guild {}", event.getGuild().getId(), failure));
+            return;
+        }
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("Lavaplayer tracks cannot be queued while Spotify playback is active yet. Stop Spotify first.");
+            return;
+        }
         event.reply(loadingEmoji+" Loading... `["+args+"]`", m -> bot.getPlayerManager().loadItemOrdered(event.getGuild(), args, new ResultHandler(m,event,false)));
     }
     

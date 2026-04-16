@@ -21,6 +21,7 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.settings.Settings;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import java.io.IOException;
 
 /**
  *
@@ -42,7 +43,7 @@ public class VolumeCmd extends DJCommand
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
         Settings settings = event.getClient().getSettingsFor(event.getGuild());
-        int volume = handler.getPlayer().getVolume();
+        int volume = handler.getVolume();
         if(event.getArgs().isEmpty())
         {
             event.reply(FormatUtil.volumeIcon(volume)+" Current volume is `"+volume+"`");
@@ -59,9 +60,16 @@ public class VolumeCmd extends DJCommand
                 event.reply(event.getClient().getError()+" Volume must be a valid integer between 0 and 150!");
             else
             {
-                handler.getPlayer().setVolume(nvolume);
-                settings.setVolume(nvolume);
-                event.reply(FormatUtil.volumeIcon(nvolume)+" Volume changed from `"+volume+"` to `"+nvolume+"`");
+                try
+                {
+                    handler.setVolume(nvolume);
+                    settings.setVolume(nvolume);
+                    event.reply(FormatUtil.volumeIcon(nvolume)+" Volume changed from `"+volume+"` to `"+nvolume+"`");
+                }
+                catch(IOException ex)
+                {
+                    event.replyError("Failed to change volume: " + ex.getMessage());
+                }
             }
         }
     }

@@ -25,6 +25,8 @@ import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
 import net.dv8tion.jda.api.exceptions.PermissionException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -32,6 +34,7 @@ import net.dv8tion.jda.api.exceptions.PermissionException;
  */
 public abstract class MusicCommand extends Command 
 {
+    private static final Logger LOG = LoggerFactory.getLogger(MusicCommand.class);
     protected final Bot bot;
     protected boolean bePlaying;
     protected boolean beListening;
@@ -96,7 +99,15 @@ public abstract class MusicCommand extends Command
             }
         }
         
-        doCommand(event);
+        try
+        {
+            doCommand(event);
+        }
+        catch(Exception ex)
+        {
+            LOG.error("Music command {} failed for guild {}", getName(), event.getGuild().getId(), ex);
+            event.replyError("Command failed: " + (ex.getMessage() == null ? ex.getClass().getSimpleName() : ex.getMessage()));
+        }
     }
     
     public abstract void doCommand(CommandEvent event);

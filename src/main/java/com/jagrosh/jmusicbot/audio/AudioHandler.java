@@ -18,6 +18,11 @@ package com.jagrosh.jmusicbot.audio;
 import com.jagrosh.jmusicbot.playlist.PlaylistLoader.Playlist;
 import com.jagrosh.jmusicbot.queue.AbstractQueue;
 import com.jagrosh.jmusicbot.settings.QueueType;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyPlayback;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyContextSnapshot;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyStatus;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyTrackDetails;
+import com.jagrosh.jmusicbot.audio.spotify.SpotifyUrl;
 import com.jagrosh.jmusicbot.utils.TimeUtil;
 import com.jagrosh.jmusicbot.settings.RepeatMode;
 import com.sedmelluq.discord.lavaplayer.player.AudioPlayer;
@@ -33,7 +38,9 @@ import java.util.Set;
 import com.jagrosh.jmusicbot.settings.Settings;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
 import com.sedmelluq.discord.lavaplayer.source.youtube.YoutubeAudioTrack;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.audio.AudioSendHandler;
@@ -60,15 +67,18 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     private final PlayerManager manager;
     private final AudioPlayer audioPlayer;
     private final long guildId;
+    private final SpotifyPlayback spotifyPlayback;
     
     private AudioFrame lastFrame;
     private AbstractQueue<QueuedTrack> queue;
+    private String lastTrackTitle;
 
     protected AudioHandler(PlayerManager manager, Guild guild, AudioPlayer player)
     {
         this.manager = manager;
         this.audioPlayer = player;
         this.guildId = guild.getIdLong();
+        this.spotifyPlayback = manager.getBot().getConfig().useSpotify() ? new SpotifyPlayback(manager.getBot().getConfig()) : null;
 
         this.setQueueType(manager.getBot().getSettingsManager().getSettings(guildId).getQueueType());
     }
@@ -80,6 +90,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
 
     public int addTrackToFront(QueuedTrack qtrack)
     {
+        if(isSpotifyActive())
+            throw new IllegalStateException("Spotify playback does not support local queue operations yet.");
         if(audioPlayer.getPlayingTrack()==null)
         {
             audioPlayer.playTrack(qtrack.getTrack());
@@ -94,6 +106,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     
     public int addTrack(QueuedTrack qtrack)
     {
+        if(isSpotifyActive())
+            throw new IllegalStateException("Spotify playback does not support local queue operations yet.");
         if(audioPlayer.getPlayingTrack()==null)
         {
             audioPlayer.playTrack(qtrack.getTrack());
@@ -113,11 +127,24 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
         queue.clear();
         defaultQueue.clear();
         audioPlayer.stopTrack();
-        //current = null;
+        if(spotifyPlayback != null)
+        {
+            try
+            {
+                spotifyPlayback.stop();
+            }
+            catch(IOException ex)
+            {
+                LoggerFactory.getLogger("AudioHandler").warn("Failed to stop Spotify playback", ex);
+            }
+        }
+        updateTrackTitle(null);
     }
     
     public boolean isMusicPlaying(JDA jda)
     {
+        if(isSpotifyActive())
+            return guild(jda).getSelfMember().getVoiceState().inAudioChannel() && getSpotifyTrack() != null;
         return guild(jda).getSelfMember().getVoiceState().inAudioChannel() && audioPlayer.getPlayingTrack()!=null;
     }
     
@@ -133,6 +160,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     
     public RequestMetadata getRequestMetadata()
     {
+        if(isSpotifyActive())
+            return spotifyPlayback.getRequestMetadata();
         if(audioPlayer.getPlayingTrack() == null)
             return RequestMetadata.EMPTY;
         RequestMetadata rm = audioPlayer.getPlayingTrack().getUserData(RequestMetadata.class);
@@ -141,6 +170,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     
     public boolean playFromDefault()
     {
+        if(isSpotifyActive())
+            return false;
         if(!defaultQueue.isEmpty())
         {
             audioPlayer.playTrack(defaultQueue.remove(0));
@@ -210,13 +241,15 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     public void onTrackStart(AudioPlayer player, AudioTrack track) 
     {
         votes.clear();
-        manager.getBot().getNowplayingHandler().onTrackUpdate(track);
+        updateTrackTitle(track == null ? null : track.getInfo().title);
     }
 
     
     // Formatting
     public MessageCreateData getNowPlaying(JDA jda)
     {
+        if(isSpotifyActive())
+            return getSpotifyNowPlaying(jda);
         if(isMusicPlaying(jda))
         {
             Guild guild = guild(jda);
@@ -270,14 +303,14 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
                 .setContent(FormatUtil.filter(manager.getBot().getConfig().getSuccess()+" **Now Playing...**"))
                 .setEmbeds(new EmbedBuilder()
                 .setTitle("No music playing")
-                .setDescription(STOP_EMOJI+" "+FormatUtil.progressBar(-1)+" "+FormatUtil.volumeIcon(audioPlayer.getVolume()))
+                .setDescription(STOP_EMOJI+" "+FormatUtil.progressBar(-1)+" "+FormatUtil.volumeIcon(getVolume()))
                 .setColor(guild.getSelfMember().getColor())
                 .build()).build();
     }
 
     public String getStatusEmoji()
     {
-        return audioPlayer.isPaused() ? PAUSE_EMOJI : PLAY_EMOJI;
+        return isPaused() ? PAUSE_EMOJI : PLAY_EMOJI;
     }
     
     // Audio Send Handler methods
@@ -305,6 +338,8 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     @Override
     public boolean canProvide() 
     {
+        if(isSpotifyActive())
+            return spotifyPlayback.canProvide();
         lastFrame = audioPlayer.provide();
         return lastFrame != null;
     }
@@ -312,13 +347,189 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     @Override
     public ByteBuffer provide20MsAudio() 
     {
+        if(isSpotifyActive())
+            return spotifyPlayback.provide();
         return ByteBuffer.wrap(lastFrame.getData());
     }
 
     @Override
     public boolean isOpus() 
     {
-        return true;
+        return !isSpotifyActive();
+    }
+
+    public boolean isPaused()
+    {
+        return isSpotifyActive() ? spotifyPlayback.isPaused() : audioPlayer.isPaused();
+    }
+
+    public int getVolume()
+    {
+        return isSpotifyActive() ? spotifyPlayback.getVolume() : audioPlayer.getVolume();
+    }
+
+    public void setVolume(int volume) throws IOException
+    {
+        if(isSpotifyActive())
+            spotifyPlayback.setVolume(volume);
+        else
+            audioPlayer.setVolume(volume);
+    }
+
+    public RepeatMode setRepeatMode(RepeatMode mode) throws IOException
+    {
+        if(isSpotifyActive())
+            return spotifyPlayback.setRepeatMode(mode);
+        return mode;
+    }
+
+    public RepeatMode getRepeatMode()
+    {
+        return isSpotifyActive() ? spotifyPlayback.currentRepeatMode() : null;
+    }
+
+    public boolean setShuffleContext(boolean shuffle) throws IOException
+    {
+        return isSpotifyActive() && spotifyPlayback.setShuffleContext(shuffle);
+    }
+
+    public boolean isSeekable()
+    {
+        return isSpotifyActive() ? getSpotifyTrack() != null : audioPlayer.getPlayingTrack() != null && audioPlayer.getPlayingTrack().isSeekable();
+    }
+
+    public long getPosition()
+    {
+        return isSpotifyActive() ? spotifyPlayback.getPosition() : audioPlayer.getPlayingTrack().getPosition();
+    }
+
+    public long getDuration()
+    {
+        return isSpotifyActive() ? spotifyPlayback.getDuration() : audioPlayer.getPlayingTrack().getDuration();
+    }
+
+    public String getCurrentTitle()
+    {
+        if(isSpotifyActive())
+        {
+            SpotifyTrackDetails track = getSpotifyTrack();
+            return track == null ? null : track.getName();
+        }
+        return audioPlayer.getPlayingTrack() == null ? null : audioPlayer.getPlayingTrack().getInfo().title;
+    }
+
+    public String getCurrentUri()
+    {
+        if(isSpotifyActive())
+        {
+            SpotifyTrackDetails track = getSpotifyTrack();
+            return track == null ? spotifyPlayback.getRequestedUri() : track.getUri();
+        }
+        return audioPlayer.getPlayingTrack() == null ? null : audioPlayer.getPlayingTrack().getInfo().uri;
+    }
+
+    public void pausePlayback() throws IOException
+    {
+        if(isSpotifyActive())
+            spotifyPlayback.pause();
+        else
+            audioPlayer.setPaused(true);
+    }
+
+    public void resumePlayback() throws IOException
+    {
+        if(isSpotifyActive())
+            spotifyPlayback.resume();
+        else
+            audioPlayer.setPaused(false);
+    }
+
+    public void skipCurrent() throws IOException
+    {
+        if(isSpotifyActive())
+            spotifyPlayback.next();
+        else
+            audioPlayer.stopTrack();
+    }
+
+    public void seekTo(long position) throws IOException
+    {
+        if(isSpotifyActive())
+            spotifyPlayback.seek(position);
+        else if(audioPlayer.getPlayingTrack() != null)
+            audioPlayer.getPlayingTrack().setPosition(position);
+    }
+
+    public boolean isSpotifyEnabled()
+    {
+        return spotifyPlayback != null;
+    }
+
+    public boolean isSpotifyActive()
+    {
+        return spotifyPlayback != null && spotifyPlayback.isActive();
+    }
+
+    public boolean isSpotifyInput(String input)
+    {
+        return spotifyPlayback != null && SpotifyUrl.parse(input) != null;
+    }
+
+    public boolean hasActiveTrack()
+    {
+        return isSpotifyActive() || audioPlayer.getPlayingTrack() != null;
+    }
+
+    public boolean hasManagedQueue()
+    {
+        return !isSpotifyActive();
+    }
+
+    public SpotifyTrackDetails startSpotify(String input, RequestMetadata metadata) throws IOException
+    {
+        SpotifyUrl parsed = SpotifyUrl.parse(input);
+        if(parsed == null)
+            throw new IOException("Unsupported Spotify URL.");
+        queue.clear();
+        defaultQueue.clear();
+        audioPlayer.stopTrack();
+        votes.clear();
+        SpotifyTrackDetails track = spotifyPlayback.play(parsed.toUri(), metadata);
+        updateTrackTitle(track == null ? "Spotify" : track.getName());
+        return track;
+    }
+
+    public String getSpotifyRequestedUri()
+    {
+        return spotifyPlayback == null ? null : spotifyPlayback.getRequestedUri();
+    }
+
+    public SpotifyStatus getSpotifyStatus()
+    {
+        return spotifyPlayback == null ? null : spotifyPlayback.getStatus();
+    }
+
+    public List<SpotifyTrackDetails> getSpotifyRecentTracks()
+    {
+        return spotifyPlayback == null ? new ArrayList<>() : spotifyPlayback.getRecentTracks();
+    }
+
+    public String getSpotifyRequestedUrl()
+    {
+        String uri = getSpotifyRequestedUri();
+        return uri == null ? null : toOpenSpotifyUrl(uri);
+    }
+
+    public SpotifyContextSnapshot getSpotifyContextSnapshot()
+    {
+        return spotifyPlayback == null ? null : spotifyPlayback.getContextSnapshot();
+    }
+
+    public void destroy()
+    {
+        audioPlayer.destroy();
+        if(spotifyPlayback != null)
+            spotifyPlayback.shutdown();
     }
     
     
@@ -326,5 +537,63 @@ public class AudioHandler extends AudioEventAdapter implements AudioSendHandler
     private Guild guild(JDA jda)
     {
         return jda.getGuildById(guildId);
+    }
+
+    private SpotifyTrackDetails getSpotifyTrack()
+    {
+        return spotifyPlayback == null ? null : spotifyPlayback.getTrack();
+    }
+
+    private MessageCreateData getSpotifyNowPlaying(JDA jda)
+    {
+        SpotifyTrackDetails track = getSpotifyTrack();
+        if(track == null)
+            return null;
+        updateTrackTitle(track.getName());
+
+        Guild guild = guild(jda);
+        MessageCreateBuilder mb = new MessageCreateBuilder();
+        mb.setContent(FormatUtil.filter(manager.getBot().getConfig().getSuccess()+" **Now Playing in "+guild.getSelfMember().getVoiceState().getChannel().getAsMention()+"...**"));
+        EmbedBuilder eb = new EmbedBuilder();
+        eb.setColor(guild.getSelfMember().getColor());
+
+        RequestMetadata rm = getRequestMetadata();
+        if(rm.getOwner() != 0L)
+        {
+            User u = guild.getJDA().getUserById(rm.user.id);
+            if(u==null)
+                eb.setAuthor(FormatUtil.formatUsername(rm.user), null, rm.user.avatar);
+            else
+                eb.setAuthor(FormatUtil.formatUsername(u), null, u.getEffectiveAvatarUrl());
+        }
+
+        eb.setTitle(track.getName(), toOpenSpotifyUrl(track.getUri()));
+        if(track.getAlbumCoverUrl() != null && !track.getAlbumCoverUrl().isBlank())
+            eb.setThumbnail(track.getAlbumCoverUrl());
+        if(track.getArtistsDisplay() != null && !track.getArtistsDisplay().isBlank())
+            eb.setFooter("Source: " + track.getArtistsDisplay(), null);
+
+        double progress = track.getDurationMs() <= 0 ? -1D : (double)getPosition() / track.getDurationMs();
+        eb.setDescription(getStatusEmoji()
+                + " " + FormatUtil.progressBar(progress)
+                + " `[" + TimeUtil.formatTime(getPosition()) + "/" + TimeUtil.formatTime(track.getDurationMs()) + "]` "
+                + FormatUtil.volumeIcon(getVolume()));
+        return mb.setEmbeds(eb.build()).build();
+    }
+
+    private void updateTrackTitle(String title)
+    {
+        if((lastTrackTitle == null && title == null) || (lastTrackTitle != null && lastTrackTitle.equals(title)))
+            return;
+        lastTrackTitle = title;
+        manager.getBot().getNowplayingHandler().onTrackUpdate(title);
+    }
+
+    private String toOpenSpotifyUrl(String spotifyUri)
+    {
+        if(spotifyUri == null || !spotifyUri.startsWith("spotify:"))
+            return spotifyUri;
+        String[] parts = spotifyUri.split(":");
+        return parts.length == 3 ? "https://open.spotify.com/" + parts[1] + "/" + parts[2] : spotifyUri;
     }
 }

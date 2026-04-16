@@ -21,6 +21,7 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import java.io.IOException;
 
 /**
  *
@@ -42,8 +43,16 @@ public class ForceskipCmd extends DJCommand
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
         RequestMetadata rm = handler.getRequestMetadata();
-        event.reply(event.getClient().getSuccess()+" Skipped **"+handler.getPlayer().getPlayingTrack().getInfo().title
-                +"** "+(rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)"));
-        handler.getPlayer().stopTrack();
+        String title = handler.getCurrentTitle();
+        try
+        {
+            handler.skipCurrent();
+            event.reply(event.getClient().getSuccess()+" Skipped **"+title
+                    +"** "+(rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)"));
+        }
+        catch(IOException ex)
+        {
+            event.replyError("Failed to skip playback: " + ex.getMessage());
+        }
     }
 }

@@ -22,7 +22,6 @@ import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.DJCommand;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
 import com.jagrosh.jmusicbot.utils.TimeUtil;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -49,17 +48,17 @@ public class SeekCmd extends MusicCommand
     public void doCommand(CommandEvent event)
     {
         AudioHandler handler = (AudioHandler) event.getGuild().getAudioManager().getSendingHandler();
-        AudioTrack playingTrack = handler.getPlayer().getPlayingTrack();
-        if (!playingTrack.isSeekable())
+        if (!handler.isSeekable())
         {
             event.replyError("This track is not seekable.");
             return;
         }
 
 
-        if (!DJCommand.checkDJPermission(event) && playingTrack.getUserData(RequestMetadata.class).getOwner() != event.getAuthor().getIdLong())
+        RequestMetadata metadata = handler.getRequestMetadata();
+        if (!DJCommand.checkDJPermission(event) && metadata.getOwner() != event.getAuthor().getIdLong())
         {
-            event.replyError("You cannot seek **" + playingTrack.getInfo().title + "** because you didn't add it!");
+            event.replyError("You cannot seek **" + handler.getCurrentTitle() + "** because you didn't add it!");
             return;
         }
 
@@ -71,8 +70,8 @@ public class SeekCmd extends MusicCommand
             return;
         }
 
-        long currentPosition = playingTrack.getPosition();
-        long trackDuration = playingTrack.getDuration();
+        long currentPosition = handler.getPosition();
+        long trackDuration = handler.getDuration();
 
         long seekMilliseconds = seekTime.relative ? currentPosition + seekTime.milliseconds : seekTime.milliseconds;
         if (seekMilliseconds > trackDuration)
@@ -83,14 +82,14 @@ public class SeekCmd extends MusicCommand
         
         try
         {
-            playingTrack.setPosition(seekMilliseconds);
+            handler.seekTo(seekMilliseconds);
         }
         catch (Exception e)
         {
             event.replyError("An error occurred while trying to seek: " + e.getMessage());
-            LOG.warn("Failed to seek track " + playingTrack.getIdentifier(), e);
+            LOG.warn("Failed to seek track " + handler.getCurrentUri(), e);
             return;
         }
-        event.replySuccess("Successfully seeked to `" + TimeUtil.formatTime(playingTrack.getPosition()) + "/" + TimeUtil.formatTime(playingTrack.getDuration()) + "`!");
+        event.replySuccess("Successfully seeked to `" + TimeUtil.formatTime(handler.getPosition()) + "/" + TimeUtil.formatTime(handler.getDuration()) + "`!");
     }
 }

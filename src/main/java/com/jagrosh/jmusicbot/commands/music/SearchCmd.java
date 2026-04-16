@@ -64,6 +64,12 @@ public class SearchCmd extends MusicCommand
     @Override
     public void doCommand(CommandEvent event) 
     {
+        AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("`search` is not supported while Spotify context playback is active.");
+            return;
+        }
         if(event.getArgs().isEmpty())
         {
             event.replyError("Please include a query.");

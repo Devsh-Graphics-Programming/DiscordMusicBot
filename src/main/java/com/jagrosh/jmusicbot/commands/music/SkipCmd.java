@@ -21,6 +21,7 @@ import com.jagrosh.jmusicbot.audio.AudioHandler;
 import com.jagrosh.jmusicbot.audio.RequestMetadata;
 import com.jagrosh.jmusicbot.commands.MusicCommand;
 import com.jagrosh.jmusicbot.utils.FormatUtil;
+import java.io.IOException;
 
 /**
  *
@@ -49,8 +50,16 @@ public class SkipCmd extends MusicCommand
         }
         if(event.getAuthor().getIdLong() == rm.getOwner() || skipRatio == 0)
         {
-            event.reply(event.getClient().getSuccess()+" Skipped **"+handler.getPlayer().getPlayingTrack().getInfo().title+"**");
-            handler.getPlayer().stopTrack();
+            String title = handler.getCurrentTitle();
+            try
+            {
+                handler.skipCurrent();
+                event.reply(event.getClient().getSuccess()+" Skipped **"+title+"**");
+            }
+            catch(IOException ex)
+            {
+                event.replyError("Failed to skip playback: " + ex.getMessage());
+            }
         }
         else
         {
@@ -70,9 +79,17 @@ public class SkipCmd extends MusicCommand
             msg += skippers + " votes, " + required + "/" + listeners + " needed]`";
             if(skippers>=required)
             {
-                msg += "\n" + event.getClient().getSuccess() + " Skipped **" + handler.getPlayer().getPlayingTrack().getInfo().title
+                msg += "\n" + event.getClient().getSuccess() + " Skipped **" + handler.getCurrentTitle()
                     + "** " + (rm.getOwner() == 0L ? "(autoplay)" : "(requested by **" + FormatUtil.formatUsername(rm.user) + "**)");
-                handler.getPlayer().stopTrack();
+                try
+                {
+                    handler.skipCurrent();
+                }
+                catch(IOException ex)
+                {
+                    event.replyError("Failed to skip playback: " + ex.getMessage());
+                    return;
+                }
             }
             event.reply(msg);
         }

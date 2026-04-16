@@ -18,7 +18,6 @@ package com.jagrosh.jmusicbot.audio;
 import com.jagrosh.jmusicbot.Bot;
 import com.jagrosh.jmusicbot.entities.Pair;
 import com.jagrosh.jmusicbot.settings.Settings;
-import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -100,13 +99,13 @@ public class NowplayingHandler
     }
 
     // "event"-based methods
-    public void onTrackUpdate(AudioTrack track)
+    public void onTrackUpdate(String trackTitle)
     {
         // update bot status if applicable
         if(bot.getConfig().getSongInStatus())
         {
-            if(track!=null && bot.getJDA().getGuilds().stream().filter(g -> g.getSelfMember().getVoiceState().inAudioChannel()).count()<=1)
-                bot.getJDA().getPresence().setActivity(Activity.listening(track.getInfo().title));
+            if(trackTitle != null && bot.getJDA().getGuilds().stream().filter(g -> g.getSelfMember().getVoiceState().inAudioChannel()).count()<=1)
+                bot.getJDA().getPresence().setActivity(Activity.listening(trackTitle));
             else
                 bot.resetGame();
         }

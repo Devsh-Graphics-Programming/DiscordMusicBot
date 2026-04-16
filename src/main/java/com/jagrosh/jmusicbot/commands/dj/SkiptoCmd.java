@@ -50,6 +50,11 @@ public class SkiptoCmd extends DJCommand
             return;
         }
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("`skipto` is not supported while Spotify context playback is active.");
+            return;
+        }
         if(index<1 || index>handler.getQueue().size())
         {
             event.reply(event.getClient().getError()+" Position must be a valid integer between 1 and "+handler.getQueue().size()+"!");

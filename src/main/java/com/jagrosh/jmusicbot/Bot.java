@@ -142,7 +142,7 @@ public class Bot
                 if(ah!=null)
                 {
                     ah.stopAndClear();
-                    ah.getPlayer().destroy();
+                    ah.destroy();
                 }
             });
             jda.shutdown();

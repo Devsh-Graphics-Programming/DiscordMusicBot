@@ -45,6 +45,11 @@ public class RemoveCmd extends MusicCommand
     public void doCommand(CommandEvent event) 
     {
         AudioHandler handler = (AudioHandler)event.getGuild().getAudioManager().getSendingHandler();
+        if(handler.isSpotifyActive())
+        {
+            event.replyError("`remove` is not supported while Spotify context playback is active.");
+            return;
+        }
         if(handler.getQueue().isEmpty())
         {
             event.replyError("There is nothing in the queue!");
